@@ -1,4 +1,4 @@
-name: Bandido quer 672
+name: ArkOS4Clone的构建和发布
 
 on:
   workflow_dispatch:
@@ -36,15 +36,13 @@ jobs:
       - name: Download & extract source image
         run: |
           BASE_NAME="dArkOS_RG351MP_trixie_06072026.img.7z"
-          # A tag exata da release no repositório é 06072026
           URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/v06072026"
           
           echo "=== 1. Baixando arquivos ==="
           for i in 001 002; do
             echo "Tentando baixar parte $i..."
-            # O curl -fL baixa o arquivo e segue redirects. Se o link estiver quebrado, ele falha imediatamente.
             curl -fL "${URL_DIR}/${BASE_NAME}.${i}" -o "${BASE_NAME}.${i}" || { 
-              echo "❌ ERRO: O download da parte $i falhou! Verifique se a tag ou nome do arquivo estão corretos."
+              echo "❌ ERRO: O download da parte $i falhou!"
               exit 1 
             }
           done
@@ -54,7 +52,7 @@ jobs:
           
           echo "=== 3. Extraindo 7z ==="
           7z x "${BASE_NAME}.001" -o. -y || {
-            echo "❌ ERRO: O 7z falhou ao extrair. O arquivo baixado pode estar corrompido."
+            echo "❌ ERRO: O 7z falhou ao extrair."
             exit 1
           }
           
@@ -65,11 +63,10 @@ jobs:
           IMG_FILE=$(ls *.img 2>/dev/null | head -1)
           if [ -z "$IMG_FILE" ]; then
             echo "❌ ERRO: Arquivo .img não encontrado após a extração!"
-            ls -lh
             exit 1
           fi
           echo "✅ Sucesso! Imagem base: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))"
-          
+
       - name: Build image
         run: |
           chmod +x build_image.sh grow_p2_plus.sh mount_arkos.sh clone_support.sh build_dtb_selector.sh uboot/flash_uboot.sh
@@ -86,4 +83,20 @@ jobs:
             exit 1
           fi
           BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
-          FILE_SIZE=$(stat -c
+          FILE_SIZE=$(stat -c%s "$XZ_FILE")
+          LIMIT=$((1900 * 1024 * 1024))
+
+          if [ "$FILE_SIZE" -gt "$LIMIT" ]; then
+            echo "文件超过1900M，7z分卷压缩..."
+            7z a -v1900m -mx=0 "${XZ_FILE}.7z" "$XZ_FILE"
+            FILES=$(ls ${XZ_FILE}.7z.* | tr '\n' ' ')
+          else
+            FILES="$XZ_FILE"
+          fi
+
+          echo "上传文件: $FILES"
+          gh release create "$BUILD_DATE" \
+            $FILES \
+            --title "ArkOS4Clone-$BUILD_DATE" \
+            --notes "ArkOS4Clone 构建版本 - $BUILD_DATE" \
+            --draft=true
