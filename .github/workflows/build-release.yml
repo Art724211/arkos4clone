@@ -37,7 +37,7 @@ jobs:
         run: |
           BASE_NAME="dArkOS_RG351MP_trixie_06072026.img.7z"
           # A tag exata da release no repositório é 06072026
-          URL_DIR="https://github.com/christianhaitian/dArkOS/releases/tag/v06072026"
+          URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/v06072026"
           
           echo "=== 1. Baixando arquivos ==="
           for i in 001 002; do
