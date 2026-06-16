@@ -1,4 +1,4 @@
-name: ArkOS4Clone的构建和发布
+name: Bandido quer 67
 
 on:
   workflow_dispatch:
