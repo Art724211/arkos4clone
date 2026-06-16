@@ -35,30 +35,40 @@ jobs:
 
       - name: Download & extract source image
         run: |
-          # Definição das novas variáveis com base no repositório dArkOS
           BASE_NAME="dArkOS_RG351MP_trixie_06072026.img.7z"
+          # ATENÇÃO: Verifique se "trixie" é a TAG exata da release no GitHub.
           URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/trixie"
           
-          echo "=== 下载分卷 ==="
+          echo "=== 1. Baixando arquivos ==="
           for i in 001 002; do
-            echo "Downloading part $i ..."
-            wget --progress=bar:force:noscroll "${URL_DIR}/${BASE_NAME}.${i}" && echo "part $i done" || { echo "Failed to download part $i"; exit 1; }
+            echo "Tentando baixar parte $i..."
+            # curl -fL falha imediatamente se o arquivo não existir (Erro 404)
+            curl -fL "${URL_DIR}/${BASE_NAME}.${i}" -o "${BASE_NAME}.${i}" || { 
+              echo "❌ ERRO: O download da parte $i falhou! O link provavelmente está incorreto ou o arquivo não existe nessa tag."
+              exit 1 
+            }
           done
           
-          echo "=== 解压 7z 分卷 ==="
-          # O 7z localiza automaticamente a parte .002 no mesmo diretório
-          7z x "${BASE_NAME}.001" -o. -y
+          echo "=== 2. Verificando o tamanho dos arquivos baixados ==="
+          ls -lh ${BASE_NAME}.*
           
-          echo "=== 删除 7z 压缩包释放空间 ==="
+          echo "=== 3. Extraindo 7z ==="
+          7z x "${BASE_NAME}.001" -o. -y || {
+            echo "❌ ERRO: O 7z falhou ao extrair. O arquivo baixado pode estar corrompido."
+            exit 1
+          }
+          
+          echo "=== 4. Deletando partes 7z para liberar espaço ==="
           rm -f ${BASE_NAME}.*
           
-          echo "=== 确认 img ==="
+          echo "=== 5. Verificando a imagem extraída ==="
           IMG_FILE=$(ls *.img 2>/dev/null | head -1)
           if [ -z "$IMG_FILE" ]; then
-            echo "ERROR: Final .img file not found!"
+            echo "❌ ERRO: Arquivo .img não encontrado após a extração. Veja se o nome dentro do 7z é diferente."
+            ls -lh
             exit 1
           fi
-          echo "Source image: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))"
+          echo "✅ Sucesso! Imagem base: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))""
 
       - name: Build image
         run: |
