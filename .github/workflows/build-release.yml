@@ -36,15 +36,15 @@ jobs:
       - name: Download & extract source image
         run: |
           BASE_NAME="dArkOS_RG351MP_trixie_06072026.img.7z"
-          # ATENÇÃO: Verifique se "trixie" é a TAG exata da release no GitHub.
-          URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/trixie"
+          # A tag exata da release no repositório é 06072026
+          URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/06072026"
           
           echo "=== 1. Baixando arquivos ==="
           for i in 001 002; do
             echo "Tentando baixar parte $i..."
-            # curl -fL falha imediatamente se o arquivo não existir (Erro 404)
+            # O curl -fL baixa o arquivo e segue redirects. Se o link estiver quebrado, ele falha imediatamente.
             curl -fL "${URL_DIR}/${BASE_NAME}.${i}" -o "${BASE_NAME}.${i}" || { 
-              echo "❌ ERRO: O download da parte $i falhou! O link provavelmente está incorreto ou o arquivo não existe nessa tag."
+              echo "❌ ERRO: O download da parte $i falhou! Verifique se a tag ou nome do arquivo estão corretos."
               exit 1 
             }
           done
@@ -64,12 +64,12 @@ jobs:
           echo "=== 5. Verificando a imagem extraída ==="
           IMG_FILE=$(ls *.img 2>/dev/null | head -1)
           if [ -z "$IMG_FILE" ]; then
-            echo "❌ ERRO: Arquivo .img não encontrado após a extração. Veja se o nome dentro do 7z é diferente."
+            echo "❌ ERRO: Arquivo .img não encontrado após a extração!"
             ls -lh
             exit 1
           fi
-          echo "✅ Sucesso! Imagem base: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))""
-
+          echo "✅ Sucesso! Imagem base: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))"
+          
       - name: Build image
         run: |
           chmod +x build_image.sh grow_p2_plus.sh mount_arkos.sh clone_support.sh build_dtb_selector.sh uboot/flash_uboot.sh
