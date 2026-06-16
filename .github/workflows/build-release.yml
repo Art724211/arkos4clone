@@ -35,33 +35,29 @@ jobs:
 
       - name: Download & extract source image
         run: |
-          BASE_URL="https://github.com/lcdyk0517/baidupan2release/releases/download/backup-r3xs/ArkOS_R35S-R36S_v2.0_11072025_MultiPanel.img.xz.7z"
-          FILENAME=$(basename "$BASE_URL")
-
+          # Definição das novas variáveis com base no repositório dArkOS
+          BASE_NAME="dArkOS_RG351MP_trixie_06072026.img.7z"
+          URL_DIR="https://github.com/christianhaitian/dArkOS/releases/download/trixie"
+          
           echo "=== 下载分卷 ==="
           for i in 001 002; do
             echo "Downloading part $i ..."
-            wget --progress=bar:force:noscroll "${BASE_URL}.${i}" && echo "part $i done" || { echo "Failed to download part $i"; exit 1; }
+            wget --progress=bar:force:noscroll "${URL_DIR}/${BASE_NAME}.${i}" && echo "part $i done" || { echo "Failed to download part $i"; exit 1; }
           done
-
+          
           echo "=== 解压 7z 分卷 ==="
-          7z x "${FILENAME}.001" -o. -y
-
-          echo "=== 查找并解压 xz ==="
-          ls -lh *.7z* *.xz 2>/dev/null || true
-          XZ_FILE=$(ls *.xz 2>/dev/null | head -1)
-          if [ -z "$XZ_FILE" ]; then
-            echo "ERROR: No .xz file found after 7z extraction"
-            exit 1
-          fi
-          echo "Extracting $XZ_FILE ..."
-          unxz "$XZ_FILE"
-
-          echo "=== 删除中间文件，释放空间 ==="
-          rm -f *.7z.001 *.7z.002
-
+          # O 7z localiza automaticamente a parte .002 no mesmo diretório
+          7z x "${BASE_NAME}.001" -o. -y
+          
+          echo "=== 删除 7z 压缩包释放空间 ==="
+          rm -f ${BASE_NAME}.*
+          
           echo "=== 确认 img ==="
           IMG_FILE=$(ls *.img 2>/dev/null | head -1)
+          if [ -z "$IMG_FILE" ]; then
+            echo "ERROR: Final .img file not found!"
+            exit 1
+          fi
           echo "Source image: $IMG_FILE ($(du -h "$IMG_FILE" | cut -f1))"
 
       - name: Build image
@@ -80,20 +76,4 @@ jobs:
             exit 1
           fi
           BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)
-          FILE_SIZE=$(stat -c%s "$XZ_FILE")
-          LIMIT=$((1900 * 1024 * 1024))
-
-          if [ "$FILE_SIZE" -gt "$LIMIT" ]; then
-            echo "文件超过1900M，7z分卷压缩..."
-            7z a -v1900m -mx=0 "${XZ_FILE}.7z" "$XZ_FILE"
-            FILES=$(ls ${XZ_FILE}.7z.* | tr '\n' ' ')
-          else
-            FILES="$XZ_FILE"
-          fi
-
-          echo "上传文件: $FILES"
-          gh release create "$BUILD_DATE" \
-            $FILES \
-            --title "ArkOS4Clone-$BUILD_DATE" \
-            --notes "ArkOS4Clone 构建版本 - $BUILD_DATE" \
-            --draft=true
+          FILE_SIZE=$(stat -c
